@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SCOREBOARD</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e6091">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- PWA UPDATE NOTIFICATION BANNER -->
+  <div id="pwa-update-toast" class="update-toast hidden">
+    <span>New version available!</span>
+    <button type="button" id="btn-reload-pwa" onclick="reloadAppUpdate()">Update Now</button>
+  </div>
+
+  <!-- ==================== HOME SCREEN ==================== -->
+  <main id="screen-home" class="screen-view">
+    <header class="header">
+      <img src="icons/logo.png" alt="Assafra Archery Club" class="logo">
+      <h1 class="title">ASSAFRA<br>SCOREBOARD</h1>
+      <p class="tagline">Practice &bull; Improve &bull; Stay Consistent</p>
+    </header>
+
+    <div class="menu-list">
+      <button class="btn btn-blue" onclick="showScreen('screen-setup')">
+        <span class="btn-icon">🎯</span>
+        <span class="btn-text">START PRACTICE</span>
+        <span class="btn-arrow">›</span>
+      </button>
+
+      <button class="btn btn-green" onclick="showScreen('screen-history')">
+        <span class="btn-icon">📊</span>
+        <span class="btn-text">PRACTICE HISTORY</span>
+        <span class="btn-arrow">›</span>
+      </button>
+
+      <button class="btn btn-orange" onclick="showScreen('screen-profile')">
+        <span class="btn-icon">👤</span>
+        <span class="btn-text">ARCHER PROFILE</span>
+        <span class="btn-arrow">›</span>
+      </button>
+
+      <button class="btn btn-purple" onclick="showScreen('screen-settings')">
+        <span class="btn-icon">⚙️</span>
+        <span class="btn-text">SETTINGS</span>
+        <span class="btn-arrow">›</span>
+      </button>
+    </div>
+
+    <footer class="footer">
+      <p>Developed by Abu Danial Assafra @ 2026</p>
+    </footer>
+  </main>
+
+  <!-- ==================== PRACTICE SETUP SCREEN ==================== -->
+  <section id="screen-setup" class="screen-view screen-hidden">
+    <div class="setup-nav">
+      <button class="btn-back-text" onclick="showScreen('screen-home')">‹ Back</button>
+      <h2 class="setup-title">PRACTICE SETUP</h2>
+      <button class="btn-score-undo" onclick="undoSetupAction()" title="Undo Deletion">↶ Undo</button>
+    </div>
+
+    <div id="resume-session-banner" class="resume-banner hidden">
+      <div style="text-align:left;">
+        <strong style="font-size:0.85rem; color:#166534;">Unfinished Session Detected!</strong>
+        <p id="resume-banner-meta" style="font-size:0.75rem; color:#15803d; margin:0;">30M • End 2/6</p>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="btn-resume-action" onclick="resumeSavedSession()">Resume</button>
+        <button type="button" class="btn-resume-discard" onclick="discardSavedSession()">Discard</button>
+      </div>
+    </div>
+
+    <div class="setup-scroll-area">
+      <div class="card-section card-group-bold">
+        <label class="section-label group-header-label">PRACTICE MODE</label>
+        <div class="mode-toggle-group">
+          <button type="button" id="btn-mode-personal" class="btn-mode active" onclick="setPracticeMode('personal')">
+            <span class="mode-icon-svg">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </span>
+            Personal
+          </button>
+          <button type="button" id="btn-mode-team" class="btn-mode" onclick="setPracticeMode('team')">
+            <span class="mode-icon-svg">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            </span>
+            Team
+          </button>
+        </div>
+
+        <div id="personal-name-box" class="personal-box" style="margin-top: 10px;">
+          <label class="input-sublabel" for="input-personal-name">Your Name</label>
+          <div class="personal-input-row" style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="input-personal-name" placeholder="Enter your name..." oninput="savePersonalName(this.value); validateSetupInputs();" style="flex-grow:1;">
+            <button type="button" class="btn-reset-name" onclick="resetPersonalNameInput()">Reset</button>
+          </div>
+        </div>
+
+        <div id="team-selector-box" class="team-box hidden">
+          <div class="team-box-header">
+            <label class="input-sublabel">Active Archers in Session</label>
+            <span id="archer-count-badge" class="count-badge">0 active</span>
+          </div>
+
+          <div id="archer-chips-container" class="archer-chips"></div>
+
+          <div class="add-archer-area">
+            <div class="add-archer-row">
+              <select id="select-archers-history" onchange="addArcherFromHistory(this.value)">
+                <option value="">-- Select from Master Archer List --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE MASTER ARCHER LIST CARD -->
+      <div id="card-master-archer-section" class="card-section card-group-bold hidden">
+        <label class="section-label group-header-label" style="font-size: 0.95rem !important;">CREATE MASTER ARCHER LIST</label>
+        
+        <div class="add-archer-row-large" style="margin: 10px 0;">
+          <input type="text" id="input-new-archer-master" class="modal-input-large" placeholder="Type new archer name..." onkeypress="handleMasterArcherEnter(event)">
+          <button type="button" class="btn-add-action-large" onclick="addNewMasterArcher()">Add</button>
+        </div>
+
+        <div id="archer-master-list" class="master-archer-grid-2col"></div>
+      </div>
+
+      <!-- QUICK PRESETS -->
+      <div class="card-section card-group-bold">
+        <div class="preset-section-header">
+          <label class="section-label group-header-label" style="margin-bottom:0;">QUICK PRESETS</label>
+          <span class="preset-hint">Tap to select • ✏️ edit • ✕ delete</span>
+        </div>
+        <div id="preset-chips" class="preset-chips-grid"></div>
+
+        <div id="preset-edit-drawer" class="preset-edit-container hidden" style="margin-top: 10px;">
+          <label class="input-sublabel">Rename / Update Preset</label>
+          <input type="text" id="input-edit-preset-name" class="modal-input" placeholder="Preset name..." style="margin-bottom: 8px; width: 100%;">
+ 
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <button type="button" class="btn-save-matrix-blue" onclick="saveEditedPreset()" style="flex: 1;">Update Preset</button>
+            <button type="button" class="btn-cancel-matrix-gray" onclick="cancelEditPreset()" style="flex: 1;">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-section card-group-bold">
+        <label class="section-label group-header-label" style="margin-bottom:10px;">FORMAT</label>
+
+        <div class="grid-2-col" style="margin-bottom:8px;">
+          <div class="config-box">
+            <label for="input-distance">DISTANCE</label>
+            <div class="input-with-unit">
+              <input type="number" id="input-distance" value="30" oninput="validateSetupInputs()">
+              <span class="unit">M</span>
+            </div>
+          </div>
+
+          <div class="config-box">
+            <label for="input-tf-size">TARGET FACE</label>
+            <div class="input-with-unit">
+              <input type="number" id="input-tf-size" value="80" oninput="validateSetupInputs()">
+              <span class="unit">CM</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3-col" style="margin-bottom:8px;">
+          <div class="config-box">
+            <label for="input-rounds">ROUNDS</label>
+            <input type="number" id="input-rounds" value="1" min="1" max="10" oninput="validateSetupInputs()">
+          </div>
+          <div class="config-box">
+            <label for="input-ends">ENDS</label>
+            <input type="number" id="input-ends" value="6" min="1" max="20" oninput="validateSetupInputs()">
+          </div>
+          <div class="config-box">
+            <label for="input-arrows">ARROWS</label>
+            <input type="number" id="input-arrows" value="6" min="1" max="12" oninput="validateSetupInputs()">
+          </div>
+        </div>
+
+        <!-- Training Timer & Lane Options Side-by-Side Grid -->
+        <div style="border-top:1px solid #e2e8f0; padding-top:10px; margin-bottom:8px;">
+          <div class="grid-2-col" style="gap: 12px;">
+            <div class="preset-toggle-row">
+              <label class="switch">
+                <input type="checkbox" id="chk-timer-enable" onchange="toggleTimerInput()">
+                <span class="slider round"></span>
+              </label>
+              <span class="toggle-label">Training Timer</span>
+            </div>
+            
+            <div class="preset-toggle-row">
+              <label class="switch">
+                <input type="checkbox" id="chk-lane-enable" onchange="toggleLaneInput()">
+                <span class="slider round"></span>
+              </label>
+              <span class="toggle-label">Lane</span>
+            </div>
+          </div>
+
+          <!-- Training Timer Config Box Below -->
+          <div id="timer-config-box" class="timer-config-box hidden">
+            <div class="config-box" style="margin-top: 8px;">
+              <label for="input-timer-seconds">SECONDS PER END</label>
+              <div class="input-with-unit">
+                <input type="number" id="input-timer-seconds" value="60" min="5" max="300">
+                <span class="unit">SEC</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lane No Config Box Below -->
+          <div id="lane-config-box" class="lane-config-box hidden">
+            <div class="config-box" style="margin-top: 8px;">
+              <label for="input-lane-no" class="lane-label-muted">Lane No.</label>
+              <input type="text" id="input-lane-no" class="lane-input-muted" placeholder="e.g. 3">
+            </div>
+          </div>
+        </div>
+
+        <!-- SCORING MATRIX -->
+        <div class="config-box full-width" style="margin-bottom:8px;">
+          <div class="matrix-header-row">
+            <label for="select-matrix">SCORING MATRIX</label>
+            <button type="button" id="btn-toggle-matrix-drawer" class="btn-text-link" onclick="toggleMatrixManager()">Manage / + Add Matrix</button>
+          </div>
+          <select id="select-matrix" onchange="validateSetupInputs()"></select>
+
+          <div id="custom-matrix-box" class="custom-matrix-drawer hidden">
+            <div class="matrix-drawer-header">
+              <span class="input-sublabel" id="matrix-drawer-title">Add New Scoring Matrix</span>
+            </div>
+            
+            <input type="text" id="input-matrix-label" placeholder="Save Matrix Label (e.g. 5-Ring Target, 3D Matrix)" style="margin-bottom:8px;">
+            
+            <span class="input-sublabel">Select Points Included in Matrix:</span>
+            <div id="matrix-checkbox-grid" class="matrix-checkbox-grid"></div>
+            
+            <div class="custom-matrix-actions" style="margin-top:10px; display:flex; gap:8px;">
+              <button type="button" class="btn-save-matrix-blue" id="btn-save-matrix-action" onclick="saveCustomMatrix()" style="flex:1;">Save Matrix</button>
+              <button type="button" class="btn-cancel-matrix-gray" onclick="cancelMatrixEdit()" style="flex:1;">Cancel</button>
+            </div>
+
+            <div class="matrix-list-container">
+              <span class="input-sublabel" style="margin-top: 8px;">Custom Matrices:</span>
+              <div id="matrix-custom-items-list" class="matrix-custom-items"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #e2e8f0; padding-top:10px;">
+          <div class="preset-toggle-row">
+            <label class="switch">
+              <input type="checkbox" id="chk-save-preset" onchange="toggleSavePresetInput()">
+              <span class="slider round"></span>
+            </label>
+            <span class="toggle-label">Save this format as Preset</span>
+          </div>
+
+          <div id="save-preset-input-box" class="save-preset-drawer hidden">
+            <div class="save-preset-stacked">
+              <input type="text" id="input-preset-name" placeholder="Preset Name (e.g. TF Ketupat Assafra)">
+              <button type="button" class="btn-save-preset-full" onclick="saveCurrentAsPreset()">Save Preset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-footer">
+      <button type="button" id="btn-start-session-action" class="btn-start-session btn-start-valid" onclick="startPracticeSession()">
+        START SCORING SESSION
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== PRACTICE HISTORY SCREEN ==================== -->
+  <section id="screen-history" class="screen-view screen-hidden">
+    <div class="setup-nav">
+      <button class="btn-back-text" onclick="showScreen('screen-home')">‹ Back</button>
+      <h2 class="setup-title">PRACTICE HISTORY</h2>
+      <button id="btn-toggle-select-mode" class="btn-score-edit" onclick="toggleHistorySelectMode()">Select</button>
+    </div>
+
+    <div class="history-mode-tabs">
+      <button type="button" id="tab-hist-all" class="btn-hist-tab active" onclick="setHistoryModeFilter('all')">All</button>
+      <button type="button" id="tab-hist-personal" class="btn-hist-tab" onclick="setHistoryModeFilter('personal')">Personal</button>
+      <button type="button" id="tab-hist-team" class="btn-hist-tab" onclick="setHistoryModeFilter('team')">Team</button>
+    </div>
+
+    <div class="history-filter-bar">
+      <select id="select-history-name-filter" onchange="filterHistoryList()">
+        <option value="all">All Names</option>
+      </select>
+      <select id="select-history-date-filter" onchange="filterHistoryList()">
+        <option value="all">All Dates</option>
+      </select>
+      <select id="select-history-distance-filter" onchange="filterHistoryList()">
+        <option value="all">All Distances</option>
+      </select>
+      <!-- Clear button added -->
+      <button type="button" class="btn-clear-filter" onclick="clearHistoryFilters()" title="Clear Filters">Clear</button>
+    </div>
+
+    <div id="history-batch-action-bar" class="history-batch-bar hidden">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="chk-select-all-history" onchange="toggleSelectAllHistory(this.checked)">
+        <label for="chk-select-all-history" id="label-selected-count" style="font-size:0.8rem; font-weight:800; color:#0f172a;">0 selected</label>
+      </div>
+      <button type="button" id="btn-delete-selected-history" class="btn-batch-delete disabled" onclick="deleteSelectedHistorySessions()">
+        🗑️ Delete Selected
+      </button>
+    </div>
+
+    <div id="history-sessions-list" class="history-cards-scroll"></div>
+  </section>
+
+  <!-- ==================== ARCHER PROFILE SCREEN ==================== -->
+  <section id="screen-profile" class="screen-view screen-hidden">
+    <div class="setup-nav">
+      <button class="btn-back-text" onclick="showScreen('screen-home')">‹ Back</button>
+      <h2 class="setup-title">ARCHER PROFILE</h2>
+      <div style="width: 50px;"></div>
+    </div>
+
+    <div class="profile-scroll-area">
+      <div class="profile-hero-card" style="display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 14px;">
+        <label class="input-sublabel" style="color:rgba(255,255,255,0.8);">SELECT ARCHER</label>
+        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+          <select id="select-profile-archer" class="profile-select-archer" onchange="loadArcherProfileStats(this.value)" style="flex-grow: 1; min-width: 0;"></select>
+          <button type="button" class="btn-delete-archer-profile" onclick="promptDeleteCurrentArcher()" title="Delete Archer">🗑️</button>
+        </div>
+      </div>
+
+      <div class="profile-stats-grid">
+        <div class="profile-stat-box">
+          <span class="profile-stat-label">SESSIONS</span>
+          <span id="prof-stat-sessions" class="profile-stat-val">0</span>
+        </div>
+        <div class="profile-stat-box">
+          <span class="profile-stat-label">TOTAL ARROWS</span>
+          <span id="prof-stat-arrows" class="profile-stat-val">0</span>
+        </div>
+        <div class="profile-stat-box">
+          <span class="profile-stat-label">AVG / ARROW</span>
+          <span id="prof-stat-avg" class="profile-stat-val" style="color:#044993;">0.00</span>
+        </div>
+        <div class="profile-stat-box">
+          <span class="profile-stat-label">10s & Xs HIT</span>
+          <span id="prof-stat-tens-x" class="profile-stat-val" style="color:#eab308;">0</span>
+        </div>
+      </div>
+
+      <div class="card-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <label class="section-label" style="margin:0;">🏆 PERSONAL BESTS (PB)</label>
+          <span class="preset-hint">Best scores per distance</span>
+        </div>
+        <div id="prof-pb-table-wrap"></div>
+      </div>
+
+      <div class="card-section">
+        <label class="section-label">🎯 ACCURACY & RING BREAKDOWN</label>
+        <div id="prof-accuracy-bars-wrap" class="accuracy-bars-container"></div>
+      </div>
+
+      <div class="card-section">
+        <label class="section-label">🕒 RECENT SESSIONS</label>
+        <div id="prof-recent-sessions-list" class="history-cards-scroll" style="max-height:220px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SETTINGS SCREEN ==================== -->
+  <section id="screen-settings" class="screen-view screen-hidden">
+    <div class="setup-nav">
+      <button class="btn-back-text" onclick="showScreen('screen-home')">‹ Back</button>
+      <h2 class="setup-title">SETTINGS</h2>
+      <div style="width: 50px;"></div>
+    </div>
+
+    <div class="settings-scroll-area">
+      <div class="card-section">
+        <label class="section-label">📍 LOCATION & RANGE</label>
+        
+        <div class="preset-toggle-row" style="margin-bottom: 10px;">
+          <label class="switch">
+            <input type="checkbox" id="chk-settings-auto-gps" onchange="toggleAutoGPSSetting(this.checked)">
+            <span class="slider round"></span>
+          </label>
+          <span class="toggle-label">Auto-Detect GPS Location</span>
+        </div>
+
+        <div class="config-box" style="margin-top: 6px;">
+          <label for="input-settings-default-location">DEFAULT / FALLBACK LOCATION</label>
+          <input type="text" id="input-settings-default-location" placeholder="e.g. Putatan, Sabah" onchange="saveDefaultLocationSetting(this.value)">
+        </div>
+      </div>
+
+      <div class="card-section">
+        <label class="section-label">🔔 SOUND & TIMER PREFERENCES</label>
+        
+        <div class="preset-toggle-row" style="margin-bottom: 10px;">
+          <label class="switch">
+            <input type="checkbox" id="chk-settings-sound-enabled" onchange="toggleSoundSetting(this.checked)">
+            <span class="slider round"></span>
+          </label>
+          <span class="toggle-label">Enable Audio Timer Beeps</span>
+        </div>
+      </div>
+
+      <!-- Version & Update Button Option Added -->
+      <div class="card-section">
+        <label class="section-label">ℹ️ APP INFO</label>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+          <button type="button" class="btn-about-item" onclick="openVersionModal()">
+            <span>🚀 Version & Update</span>
+            <span>›</span>
+          </button>
+          <button type="button" class="btn-about-item" onclick="showScreen('screen-manual')">
+            <span>📖 User Manual</span>
+            <span>›</span>
+          </button>
+          <button type="button" class="btn-about-item" onclick="showScreen('screen-contact')">
+            <span>💬 Contact & Feedback</span>
+            <span>›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card-section">
+        <label class="section-label">💾 DATA BACKUP & RESTORE</label>
+        <p style="font-size:0.75rem; color:#64748b; margin-bottom:10px;">Export or transfer all your practice sessions, archer profiles, presets, and scoring matrices.</p>
+        
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button type="button" class="btn-save-preset-full" onclick="exportCompleteDatabaseJSON()">
+            📥 Download Full Backup (.json)
+          </button>
+
+          <button type="button" class="btn-export-pdf-black" onclick="document.getElementById('input-import-backup-file').click()">
+            📤 Restore from Backup File
+          </button>
+          <input type="file" id="input-import-backup-file" accept=".json" class="hidden" onchange="importCompleteDatabaseJSON(event)">
+        </div>
+      </div>
+
+      <div class="card-section" style="border-color:#fca5a5; background:#fef2f2;">
+        <label class="section-label" style="color:#dc2626;">⚠️ DANGER ZONE</label>
+        <p style="font-size:0.75rem; color:#991b1b; margin-bottom:10px;">Clear local storage cache or permanently reset all scoreboard data back to original factory defaults.</p>
+        
+        <button type="button" class="btn-batch-delete" style="width:100%; padding:10px; font-size:0.85rem;" onclick="promptFactoryReset()">
+          🗑️ Factory Reset All Data
+        </button>
+      </div>
+
+      <div class="settings-page-footer">
+        <img src="icons/logo.png" alt="Logo" class="footer-logo-small">
+        <p class="footer-copy-text">All rights reserved @ Assafra-Scoreboard - 2026 / 1448</p>
+        <p class="footer-dua-text">"May Allah forgive the developer, the users, their parents,</p>
+        <p class="footer-dua-text">and all Muslims"</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== USER MANUAL SCREEN ==================== -->
+  <section id="screen-manual" class="screen-view screen-hidden">
+    <div class="setup-nav">
+      <button class="btn-back-text" onclick="showScreen('screen-settings')">‹ Back</button>
+      <h2 class="setup-title">USER MANUAL</h2>
+      <div style="width: 50px;"></div>
+    </div>
+
+    <div class="settings-scroll-area" style="text-align: left; font-size: 0.82rem; color: #1e293b; line-height: 1.5; gap: 10px;">
+      <div class="card-section" style="display:flex; flex-direction:column; gap:10px;">
+        <h3 style="color:#044993; font-size:0.95rem;">PANDUAN PENGGUNAAN APLIKASI WEB (PWA) ASSAFRA SCOREBOARD</h3>
+        <p>Aplikasi skor digital ASSAFRA SCOREBOARD dibangunkan untuk memudahkan sesi latihan dan merekod markah secara teratur. Aplikasi ini boleh digunakan secara terus pada telefon pintar tanpa memakan ruang memori yang besar dan boleh berfungsi secara <em>Offline</em>.</p>
+        
+        <strong style="color:#044993;">1. Cara Memasang Aplikasi ke Skrin Telefon (Install PWA)</strong>
+        <p>Buka pautan aplikasi web menggunakan pelayar (Chrome untuk Android atau Safari untuk iPhone).</p>
+        <ul style="padding-left:16px;">
+          <li><strong>Android (Chrome):</strong> Tekan butang menu (3 titik di atas kanan) ➡️ Pilih "Add to Home screen" / "Install App".</li>
+          <li><strong>iPhone (Safari):</strong> Tekan butang Share (ikon petak dengan anak panah ke atas) ➡️ Pilih "Add to Home Screen".</li>
+        </ul>
+        <p>Ikon ASSAFRA SCOREBOARD akan muncul di skrin utama telefon anda seperti aplikasi biasa.</p>
+
+        <strong style="color:#044993;">2. Langkah Memulakan Sesi Pemarkahan (Start Practice)</strong>
+        <ul style="padding-left:16px;">
+          <li>Tekan butang <strong>START PRACTICE</strong>.</li>
+          <li><strong>Pilih Mod Latihan:</strong> Personal (individu) atau Team (kumpulan). Bagi mod Team, pastikan anda mengisi senarai master archer terlebih dahulu (tajuk akan berkelip merah sekiranya kosong).</li>
+          <li><strong>Tetapkan Format & Lane:</strong> Pilih Quick Preset sedia ada ATAU tetapkan Jarak, Target Face, Pusingan, End, Anak Panah, Matriks Skor, serta hidupkan Training Timer atau suis Lane berasingan beserta nombor Lane No.</li>
+        </ul>
+        <p>Pastikan semua maklumat lengkap (butang bertukar warna hijau) dan tekan <strong>START SCORING SESSION</strong>.</p>
+
+        <strong style="color:#044993;">3. Cara Memasukkan Skor & Peraturan Submit End</strong>
+        <ul style="padding-left:16px;">
+          <li><strong>Memasukkan Markah:</strong> Tekan kotak anak panah dan tekan nilai mata pada papan kekunci (Keypad).</li>
+          <li><strong>Kunci Setiap End (Wajib):</strong> Setiap pemanah mesti memasukkan skor penuh untuk End tersebut. Apabila lengkap, butang SUBMIT END akan bertukar hijau. Tekan butang SUBMIT END untuk mengunci skor.</li>
+          <li><strong>Pemanah Lewat (Late Archer):</strong> Jika ada rakan baru menyertai di tengah sesi, tekan butang "Add Archer" di bar bawah.</li>
+          <li><strong>Edit Skor:</strong> Jika tersalah tekan, gunakan butang ↶ Undo. Untuk membetulkan markah pada End terdahulu, tekan butang ✏️ Edit di atas skrin, pilih kotak yang ingin diubah, dan tekan Update.</li>
+          <li><strong>Menamatkan Sesi:</strong> Butang FINISH PRACTICE SESSION hanya akan muncul selepas semua pemanah selesai dan menghantar (submit) semua End.</li>
+        </ul>
+
+        <strong style="color:#044993;">4. Perkongsian Keputusan & Rekod</strong>
+        <ul style="padding-left:16px;">
+          <li><strong>WhatsApp:</strong> Tekan Summary ➡️ Send to WhatsApp untuk menghantar ringkasan markah, "nombor lorong (lane no.)", ranking countback (X/10), purata, dan lokasi automatik ke kumpulan WhatsApp.</li>
+          <li><strong>PDF:</strong> Tekan Save Detailed Result as PDF untuk simpanan rasmi atau cetakan.</li>
+          <li><strong>Sejarah & Profil:</strong> Semak prestasi lepas dalam menu PRACTICE HISTORY dan pantau rekod peribadi terbaik dalam menu ARCHER PROFILE.</li>
+        </ul>
+
+        <hr style="border:0; border-top:1px solid #e2e8f0; margin:6px 0;">
+        <strong style="color:#dc2626;">MAKLUM BALAS & LAPORAN MASALAH</strong>
+        <p>Sekiranya anda menjumpai sebarang ralat (bug), masalah paparan, skor tidak kemas kini, pertanyaan, atau mempunyai cadangan penambahbaikan, sila maklumkan terus kepada Pembangun melalui menu Contact & Feedback di Settings.</p>
+        <p style="text-align:left; font-weight:700; color:#044993; margin-top:8px;">Abu Danial @ Assafra</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== CONTACT & FEEDBACK SCREEN ==================== -->
+  <section id="screen-contact" class="screen-view screen-hidden">
+    <div class="setup-nav">
+      <button class="btn-back-text" onclick="showScreen('screen-settings')">‹ Back</button>
+      <h2 class="setup-title">CONTACT US</h2>
+      <div style="width: 50px;"></div>
+    </div>
+
+    <div class="settings-scroll-area">
+      <div class="card-section" style="text-align: center; padding: 24px 16px;">
+        <p style="font-size: 0.92rem; font-weight: 700; color: #1e293b; line-height: 1.5; margin-bottom: 12px;">
+          Your suggestion or feedback could make this app better.
+        </p>
+        <p style="font-size: 0.85rem; font-weight: 800; color: #16a34a; margin-bottom: 12px;">
+          Thank you for your support!
+        </p>
+        <button type="button" class="btn-whatsapp-direct" onclick="openWhatsAppDirect()">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="#ffffff" d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.79 14.07c-.24.68-1.4 1.25-1.92 1.33-.51.08-1.18.11-1.9-.12-.46-.15-1.05-.34-1.81-.67-3.19-1.39-5.26-4.63-5.42-4.84-.16-.21-1.3-1.73-1.3-3.3 0-1.57.82-2.34 1.11-2.66.29-.32.64-.4.85-.4.21 0 .43.002.61.01.2.01.47-.08.73.56.27.68.92 2.27 1 2.43.08.16.13.35.03.56-.11.21-.16.34-.32.53-.16.19-.34.42-.49.57-.16.16-.33.33-.14.66.19.33.84 1.38 1.8 2.24 1.24 1.1 2.29 1.45 2.62 1.61.33.16.52.14.71-.08.2-.21.84-.98 1.07-1.31.23-.33.46-.27.77-.16.31.11 1.97.93 2.31 1.1.34.16.57.24.65.38.08.14.08.83-.16 1.51z"/></svg>
+          Chat via WhatsApp
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCORING PAD SCREEN ==================== -->
+  <section id="screen-scoring" class="screen-view screen-hidden">
+    <div class="score-top-nav">
+      <button id="btn-mode-edit-toggle" class="btn-score-edit" onclick="toggleManualEditMode()">✏️ Edit</button>
+      <div class="score-session-info-wrap">
+        <h3 id="score-header-info" class="meta-dist-tf">30M • TF 80CM</h3>
+        <span id="score-end-round-info" class="meta-end-round">END 1/6 • ROUND 1/1</span>
+      </div>
+      <button class="btn-score-undo" onclick="undoLastArrow()" title="Undo Arrow">↶ Undo</button>
+    </div>
+
+    <div class="archer-hero-banner-row">
+      <span id="label-active-archer-name" class="archer-hero-name">Abu Danial</span>
+      <span id="session-saved-badge-permanent" class="session-saved-badge-right hidden">💾 SAVED</span>
+    </div>
+
+    <div id="scoring-archer-tabs" class="archer-pill-tabs hidden"></div>
+
+    <div id="scoring-giant-timer-box" class="giant-timer-card hidden">
+      <div class="giant-timer-digits" id="timer-giant-digits">60</div>
+      <div class="giant-timer-controls">
+        <button type="button" id="btn-giant-timer-start" class="btn-timer-primary" onclick="toggleEndTimer()">▶ START</button>
+        <button type="button" id="btn-timer-secondary" class="btn-timer-secondary" onclick="resetEndTimer()">↺ RESET</button>
+      </div>
+    </div>
+
+    <div class="scoresheet-card-wrapper">
+      <div id="scoresheet-grid-table" class="scoresheet-table"></div>
+    </div>
+
+    <div id="scoring-keypad" class="keypad-matrix-grid"></div>
+
+    <div class="submit-end-container">
+      <button id="btn-submit-end-action" class="btn-submit-end disabled" onclick="submitCurrentEnd()">
+        SUBMIT END 1
+      </button>
+    </div>
+
+    <footer class="scoring-bottom-bar-5">
+      <button type="button" class="btn-bar-item" onclick="handleExitSessionPrompt()">
+        <span class="bar-icon">‹</span>
+        <span class="bar-label">Back</span>
+      </button>
+
+      <button type="button" class="btn-bar-item" onclick="openRoundSwitcherModal()">
+        <span class="bar-icon">🔄</span>
+        <span class="bar-label">Round</span>
+      </button>
+
+      <button type="button" class="btn-bar-item" onclick="openEndManagerModal()">
+        <span class="bar-icon">🎯</span>
+        <span class="bar-label">End</span>
+      </button>
+
+      <button type="button" class="btn-bar-item" onclick="openSummaryModal()">
+        <span class="bar-icon">📊</span>
+        <span class="bar-label">Summary</span>
+      </button>
+
+      <button type="button" class="btn-bar-item" onclick="openAddLateArcherModal()">
+        <span class="bar-icon white-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="#ffffff" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </span>
+        <span class="bar-label">Add Archer</span>
+      </button>
+    </footer>
+  </section>
+
+  <!-- ==================== MODALS ==================== -->
+  <div id="modal-exit-prompt" class="score-modal-backdrop hidden">
+    <div class="score-modal-box">
+      <h3 class="modal-title">Exit Session</h3>
+      <p class="modal-desc">Do you want to save current scores before leaving?</p>
+      <div class="modal-equal-btn-group">
+        <button type="button" class="btn-modal-equal btn-save-green" onclick="saveAndExitSession()">💾 Save & Exit</button>
+        <button type="button" class="btn-modal-equal btn-discard-red" onclick="discardAndExitSession()">🗑️ Discard & Exit</button>
+        <button type="button" class="btn-modal-equal btn-cancel-grey" onclick="closeModal('modal-exit-prompt')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-round-switcher" class="score-modal-backdrop hidden">
+    <div class="score-modal-box">
+      <h3 class="modal-title">Switch Round</h3>
+      <div id="round-modal-list" class="modal-btn-list"></div>
+      
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button type="button" class="btn-add-new-round" style="flex:1;" onclick="addNewRoundToSession()">
+          <span style="color: #ffffff; font-weight:900; margin-right:4px;">+</span> Add Round
+        </button>
+        <button type="button" class="btn-delete-round" style="flex:1;" onclick="deleteLastRoundFromSession()">
+          🗑️ Delete Last Round
+        </button>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button type="button" class="btn-modal-close" style="background:#e2e8f0; color:#334155; flex:1;" onclick="closeModal('modal-round-switcher')">Close</button>
+        <button type="button" class="btn-modal-close" style="background:#16a34a; color:#ffffff; flex:1;" onclick="confirmRoundSelection()">Select</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-end-manager" class="score-modal-backdrop hidden">
+    <div class="score-modal-box">
+      <h3 class="modal-title">Manage Ends</h3>
+      <div class="stepper-row-container" style="margin: 12px 0;">
+        <label class="input-sublabel" style="margin:0;">Ends per Round:</label>
+        <div class="stepper-box">
+          <button type="button" class="btn-stepper" onclick="adjustEndsCount(-1)">−</button>
+          <span id="end-manager-count-display" class="stepper-count-val">6</span>
+          <button type="button" class="btn-stepper" onclick="adjustEndsCount(1)">+</button>
+        </div>
+      </div>
+      <button type="button" class="btn-save-preset-full" onclick="applyAdjustedEnds()">Apply Ends</button>
+      <button type="button" class="btn-modal-close" style="margin-top:8px;" onclick="closeModal('modal-end-manager')">Close</button>
+    </div>
+  </div>
+
+  <div id="modal-summary-score" class="score-modal-backdrop hidden">
+    <div class="score-modal-box modal-lg">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 id="summary-modal-title" class="modal-title" style="margin-bottom:0;">Session Results</h3>
+        <span id="summary-meta-badge" style="font-size:0.75rem; font-weight:800; color:#044993;">30M • 6A x 6E x 2R</span>
+      </div>
+
+      <div id="summary-modal-content" class="modal-summary-body"></div>
+
+      <div class="summary-actions-stack">
+        <button type="button" class="btn-share-wa-full" onclick="shareScorecardWhatsApp()">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="#ffffff" d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.79 14.07c-.24.68-1.4 1.25-1.92 1.33-.51.08-1.18.11-1.9-.12-.46-.15-1.05-.34-1.81-.67-3.19-1.39-5.26-4.63-5.42-4.84-.16-.21-1.3-1.73-1.3-3.3 0-1.57.82-2.34 1.11-2.66.29-.32.64-.4.85-.4.21 0 .43.002.61.01.2.01.47-.08.73.56.27.68.92 2.27 1 2.43.08.16.13.35.03.56-.11.21-.16.34-.32.53-.16.19-.34.42-.49.57-.16.16-.33.33-.14.66.19.33.84 1.38 1.8 2.24 1.24 1.1 2.29 1.45 2.62 1.61.33.16.52.14.71-.08.2-.21.84-.98 1.07-1.31.23-.33.46-.27.77-.16.31.11 1.97.93 2.31 1.1.34.16.57.24.65.38.08.14.08.83-.16 1.51z"/></svg>
+          Send to WhatsApp
+        </button>
+
+        <!-- PDF Button color changed to Dark Blue -->
+        <button type="button" class="btn-export-pdf-darkblue" onclick="saveDetailedResultPDF()">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#ffffff" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+          Save Detailed Result as PDF
+        </button>
+
+        <button type="button" class="btn-modal-close" onclick="closeModal('modal-summary-score')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Version & Update Modal -->
+  <div id="modal-version-info" class="score-modal-backdrop hidden">
+    <div class="score-modal-box" style="text-align: center;">
+      <h3 class="modal-title" style="color:#044993;">ASSAFRA SCOREBOARD</h3>
+      <p style="font-size: 0.95rem; font-weight: 800; color: #1e293b; margin: 12px 0 4px;">Versi 1.0</p>
+      <p style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 16px;">Updated on 9 Sep 2026</p>
+      <p style="font-size: 0.8rem; font-weight: 600; color: #0f02ff; margin-bottom: 16px;">Aplikasi ini adalah percuma. Dilarang menjual atau mengubah suai tanpa kebenaran pemilik.</p>
+      <button type="button" class="btn-modal-close" onclick="closeModal('modal-version-info')">Close</button>
+    </div>
+  </div>
+
+  <div id="modal-add-late-archer" class="score-modal-backdrop hidden">
+    <div class="score-modal-box">
+      <h3 class="modal-title">Add Late Archer</h3>
+      <div class="stepper-row-container" style="margin: 10px 0;">
+        <label class="input-sublabel" style="margin:0;">No. of Archers:</label>
+        <div class="stepper-box">
+          <button type="button" class="btn-stepper" onclick="adjustLateArcherCount(-1)">−</button>
+          <span id="late-archer-count-display" class="stepper-count-val">1</span>
+          <button type="button" class="btn-stepper" onclick="adjustLateArcherCount(1)">+</button>
+        </div>
+      </div>
+      
+      <div id="late-archers-inputs-wrap" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; margin-bottom:12px;"></div>
+
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-save-preset-full" style="border-radius:10px;" onclick="confirmAddLateArchers()">Join Session</button>
+        <button type="button" class="btn-cancel-rounded" onclick="closeModal('modal-add-late-archer')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-incomplete-alert" class="score-modal-backdrop hidden">
+    <div class="score-modal-box">
+      <h3 class="modal-title" style="color:#ea580c;">Incomplete Ends Detected</h3>
+      <p id="incomplete-alert-desc" class="modal-desc">Some archers have not completed earlier ends.</p>
+      <div class="modal-equal-btn-group">
+        <button type="button" class="btn-modal-equal btn-save-green" onclick="jumpToIncompleteEnd()">🎯 Go to Incomplete End</button>
+        <button type="button" class="btn-modal-equal btn-discard-red" onclick="forceFinishSession()">Finish Anyway</button>
+        <button type="button" class="btn-modal-equal btn-cancel-grey" onclick="closeModal('modal-incomplete-alert')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-recorded-confirm" class="score-modal-backdrop hidden">
+    <div class="score-modal-box" style="text-align: center;">
+      <div style="font-size: 3rem; color: #16a34a; margin-bottom: 8px;">✓</div>
+      <h3 class="modal-title" style="color:#0f172a;">Session Finished!</h3>
+      <p class="modal-desc">Your practice scores have been recorded. You can still view or tap ✏️ Edit anytime.</p>
+      <div style="margin-top: 16px;">
+        <button type="button" class="btn-modal-equal btn-save-green" onclick="closeModal('modal-recorded-confirm')">
+          ✓ Recorded
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-edit-archer" class="score-modal-backdrop hidden">
+    <div class="score-modal-box">
+      <h3 class="modal-title">Edit Archer Name</h3>
+      <div style="margin: 12px 0;">
+        <input type="text" id="input-edit-master-archer" class="modal-input" placeholder="New archer name...">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-save-preset-full" style="border-radius:10px;" onclick="confirmEditMasterArcher()">Update Name</button>
+        <button type="button" class="btn-cancel-rounded" onclick="closeModal('modal-edit-archer')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matrix Edit Modal -->
+  <div id="modal-edit-matrix-item" class="score-modal-backdrop hidden">
+    <div class="score-modal-box">
+      <h3 class="modal-title">Edit Matrix</h3>
+      <div style="margin: 10px 0;">
+        <label class="input-sublabel">Matrix Label</label>
+        <input type="text" id="input-modal-matrix-label" class="modal-input" placeholder="Matrix label..." style="margin-bottom:8px;">
+        
+        <label class="input-sublabel">Select Points Included in Matrix:</label>
+        <div id="modal-matrix-checkbox-grid" class="matrix-checkbox-grid" style="margin-top:6px;"></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="btn-save-preset-full" style="border-radius:10px; flex:1;" onclick="confirmEditMatrixItem()">Save Changes</button>
+        <button type="button" class="btn-cancel-rounded" style="flex:1;" onclick="closeModal('modal-edit-matrix-item')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
