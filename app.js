@@ -661,7 +661,6 @@ function editMatrixItem(matrixId) {
     editingMatrixId = matrixId;
     document.getElementById('input-modal-matrix-label').value = m.label;
     
-    // Paparkan grid checkbox mata scoring di dalam modal edit
     const container = document.getElementById('modal-matrix-checkbox-grid');
     if (container) {
       container.innerHTML = '';
@@ -697,7 +696,7 @@ function confirmEditMatrixItem() {
   const idx = matrices.findIndex(m => m.id === editingMatrixId);
   if (idx !== -1) {
     matrices[idx].label = newLabel;
-    matrices[idx].values = valuesArray; // Kemas kini nombor scoring matriks
+    matrices[idx].values = valuesArray;
     localStorage.setItem('assafra_matrices', JSON.stringify(matrices));
   }
   closeModal('modal-edit-matrix-item');
@@ -1734,7 +1733,7 @@ function confirmAddLateArchers() {
   renderScoresheetTable();
 }
 
-// ==================== COUNTBACK & TIE-BREAKING LOGIC (ROBUST STATS FIX) ====================
+// ==================== COUNTBACK & TIE-BREAKING LOGIC ====================
 function calculateArcherOverallStats(sessionObj, name) {
   let totalScore = 0;
   let totalArrows = 0;
@@ -1780,7 +1779,6 @@ function calculateArcherOverallStats(sessionObj, name) {
     roundScoresList.push(roundPts);
   }
 
-  // Dapatkan matriks semasa untuk menentukan 2 mata tertinggi (menyokong X & nombor secara menurun)
   const matrices = getMatrices ? getMatrices() : [];
   const selMat = matrices.find(m => m.id === sessionObj.matrixId) || { values: ["X", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1", "M"] };
   
@@ -1939,7 +1937,7 @@ function shareScorecardWhatsApp() {
   results.forEach((r) => {
     msg += `*${r.rankDisplay}. ${r.name}* : ${r.totalScore} pts\n`;
     const roundsStr = r.roundScoresList.map((pts, i) => `R${i + 1}:${pts}`).join(' | ');
-    msg += `   └ ${roundsStr} | X:${r.xCount} | 10:${r.tensCount} | Avg:${r.avg}\n\n`;
+    msg += `    └ ${roundsStr} | X:${r.xCount} | 10:${r.tensCount} | Avg:${r.avg}\n\n`;
   });
 
   msg += `------------------------------------\n`;
@@ -2081,100 +2079,11 @@ function saveDetailedResultPDF() {
   }, 500);
 }
 
-function promptDeleteCurrentArcher() {
-  const select = document.getElementById('select-profile-archer');
-  if (!select) return;
-  const archerName = select.value;
-  if (!archerName) return;
-
-  if (confirm(`Delete archer "${archerName}" and all their associated history records permanently?`)) {
-    let history = [];
-    try {
-      const saved = localStorage.getItem('assafra_practice_history');
-      if (saved) history = JSON.parse(saved);
-    } catch (e) {
-      history = [];
-    }
-
-    const updatedHistory = history.filter(s => {
-      const archerList = s.archers || Object.keys(s.scores || {});
-      return !archerList.includes(archerName);
-    });
-    localStorage.setItem('assafra_practice_history', JSON.stringify(updatedHistory));
-
-    let masterList = getArcherHistory().filter(n => n !== archerName);
-    localStorage.setItem('assafra_archers_history', JSON.stringify(masterList));
-
-    if (getPersonalName() === archerName) {
-      localStorage.removeItem('assafra_personal_name');
-    }
-
-    alert(`Archer "${archerName}" deleted successfully.`);
-    initArcherProfileScreen();
-  }
-}
-
-function finishPracticeSession(isExit = false) {
-  stopEndTimer();
-
-  const editBtn = document.getElementById('btn-mode-edit-toggle');
-  if (isManualEditModeActive || (editBtn && editBtn.textContent === 'Update')) {
-    isManualEditModeActive = false;
-    editBtn.classList.remove('active-edit-mode');
-    editBtn.classList.add('updated-green-mode');
-    editBtn.textContent = 'Updated ✓';
-
-    setTimeout(() => {
-      editBtn.classList.remove('updated-green-mode');
-      editBtn.textContent = '✏️ Edit';
-    }, 1500);
-  }
-
-  if (!activeSession) return;
-
-  const completedSession = {
-    ...activeSession,
-    scores: JSON.parse(JSON.stringify(sessionScores)),
-    completedAt: new Date().toISOString()
-  };
-
-  let history = [];
-  try {
-    const saved = localStorage.getItem('assafra_practice_history');
-    if (saved) history = JSON.parse(saved);
-  } catch (e) {
-    history = [];
-  }
-
-  const existingIndex = history.findIndex(s => s.sessionId === activeSession.sessionId);
-  if (existingIndex !== -1) {
-    history[existingIndex] = completedSession;
-  } else {
-    history.unshift(completedSession);
-  }
-
-  localStorage.setItem('assafra_practice_history', JSON.stringify(history));
-  localStorage.removeItem('assafra_active_session_backup');
-
-  const savedBadge = document.getElementById('session-saved-badge-permanent');
-  if (savedBadge) {
-    savedBadge.classList.remove('hidden');
-  }
-
-  renderScoresheetTable();
-
-  if (isExit) {
-    releaseWakeLock();
-    showScreen('screen-home');
-  } else {
-    openModal('modal-recorded-confirm');
-  }
-}
-
 let cachedHistory = [];
 let currentHistoryModeFilter = 'all';
 let isHistorySelectMode = false;
 let selectedSessionIds = new Set();
+let viewingHistorySession = null;
 
 function loadPracticeHistory() {
   try {
@@ -2716,7 +2625,7 @@ function importCompleteDatabaseJSON(event) {
         if (imported.personalName) localStorage.setItem('assafra_personal_name', imported.personalName);
         if (imported.archersHistory) localStorage.setItem('assafra_archers_history', JSON.stringify(imported.archersHistory));
         if (imported.presets) localStorage.setItem('assafra_presets', JSON.stringify(imported.presets));
-        if (imported.matrices) localStorage.setItem('assaf_matrices', JSON.stringify(imported.matrices));
+        if (imported.matrices) localStorage.setItem('assafra_matrices', JSON.stringify(imported.matrices));
         if (imported.practiceHistory) localStorage.setItem('assafra_practice_history', JSON.stringify(imported.practiceHistory));
 
         if (imported.settings) {
@@ -2841,8 +2750,9 @@ function promptDeleteCurrentArcher() {
     initArcherProfileScreen();
   }
 }
+
+// ==================== WHATSAPP DIRECT ACTION ====================
 function openWhatsAppDirect() {
-    // Gantikan nombor di bawah dengan nombor telefon rasmi anda (format antarabangsa tanpa simbol +)
     const phoneNumber = "60192841910"; 
     const message = "Hi, saya ingin memberikan maklum balas mengenai aplikasi Assafra Scoreboard.";
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
