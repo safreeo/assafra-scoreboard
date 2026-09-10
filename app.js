@@ -2841,3 +2841,10 @@ function promptDeleteCurrentArcher() {
     initArcherProfileScreen();
   }
 }
+function openWhatsAppDirect() {
+    // Gantikan nombor di bawah dengan nombor telefon rasmi anda (format antarabangsa tanpa simbol +)
+    const phoneNumber = "60192841910"; 
+    const message = "Hi, saya ingin memberikan maklum balas mengenai aplikasi Assafra Scoreboard.";
+    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+}

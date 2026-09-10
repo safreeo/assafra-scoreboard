@@ -1,6 +1,6 @@
 {
   "name": "ASSAFRA SCOREBOARD",
-  "short_name": "SCOREBOARD",
+  "short_name": "Scoreboard",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
