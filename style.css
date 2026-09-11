@@ -80,13 +80,13 @@ body {
 
 /* KAWAL LOGO UTAMA DI DALAM APLIKASI DI SINI */
 .logo {
-  width: 100% !important;
-  max-width: 85px !important; /* Anda boleh ubah nilai ini (cth: 75px hingga 95px) untuk kecilkan paparan dalam app */
-  height: auto !important;
-  max-height: none !important;
+  width: 70px !important;
+  height: 70px !important;
+  max-width: 70px !important;
+  max-height: 70px !important;
   object-fit: contain;
-  margin-top: 5px;
-  margin-bottom: 8px;
+  display: block;
+  margin: 0 auto 8px auto;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
 }
 
